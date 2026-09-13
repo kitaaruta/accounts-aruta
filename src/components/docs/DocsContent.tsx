@@ -336,112 +336,131 @@ export { handler as GET, handler as POST };`;
     const isPopup = aiLoginMode === 'popup';
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://accounts.aruta.id';
 
+    const architectureKnowledgeBlock = `### 🧠 KONTEKS ARSITEKTUR PLATFORM ARUTA SSO:
+- Platform ini adalah "Aruta Single Sign-On (SSO)" (${baseUrl}), yaitu pusat identitas tunggal (Single Source of Truth) untuk seluruh ekosistem digital Aruta.id (portal utama, riset, pustaka, bahasa daerah, GIS geospasial, ruang komunitas) serta aplikasi mitra pihak ketiga.
+- Peran Aplikasi Ini: Bertindak sebagai Relying Party (Client App) OAuth 2.0 / OpenID Connect (OIDC). Aplikasi ini TIDAK BOLEH mengelola kata sandi pengguna secara independen, melainkan mendelegasikan seluruh autentikasi ke Aruta SSO.
+- Endpoint Spesifikasi OIDC & AI Knowledge:
+  * OIDC Discovery: ${baseUrl}/.well-known/openid-configuration
+  * JWKS Public Keys: ${baseUrl}/.well-known/jwks.json
+  * AI Knowledge Base (LLMs.txt): ${baseUrl}/llms.txt
+- Skema Data Profil Pengguna (Userinfo Payload):
+  * sub: string (Unique User Identifier permanen di Aruta SSO)
+  * name: string (Nama Lengkap pengguna)
+  * username: string (Handle identitas unik pengguna, contoh: "ahmad_aruta")
+  * email: string (Alamat email terverifikasi pengguna)
+  * picture / avatar: string (URL foto profil pengguna)
+  * role: string ("Superadmin" | "Admin" | "Member" | peran khusus)
+  * status: "active" | "suspended" (WAJIB diperiksa: tolak login jika status bukan "active")
+  * company: string | undefined (Organisasi / Instansi)
+  * title: string | undefined (Jabatan / Posisi)`;
+
     if (aiFramework === 'master') {
-      return `Tolong integrasikan autentikasi Single Sign-On (SSO) dari platform "Aruta SSO" ke dalam proyek aplikasi ini secara lengkap dan siap pakai (production-ready).
+      return `Tolong buatkan integrasi autentikasi Single Sign-On (SSO) dari platform "Aruta SSO" ke dalam proyek aplikasi ini secara lengkap, aman, dan siap produksi (production-ready).
 
-### 1. Informasi Server SSO Aruta:
-- Base URL SSO: ${baseUrl}
-- OIDC Discovery Endpoint: ${baseUrl}/.well-known/openid-configuration
-- Authorize Endpoint: ${baseUrl}/api/oauth/authorize
-- Token Exchange Endpoint: ${baseUrl}/api/oauth/token
-- Userinfo Profile Endpoint: ${baseUrl}/api/oauth/userinfo
-- Revoke Token Endpoint: ${baseUrl}/api/oauth/revoke
-- Supported Scopes: openid profile email
+${architectureKnowledgeBlock}
 
-### 2. Kredensial Aplikasi Saya:
-- Nama Aplikasi: ${aiAppName}
+### 🔑 KREDENSIAL APLIKASI SAYA:
+- Nama Aplikasi Klien: ${aiAppName}
 - Client ID: ${aiClientId}
 - Client Secret: ${aiClientSecret}
 - Redirect URI / Callback URL: ${aiRedirectUri}
-- Mode Login: ${isPopup ? 'Mode Popup Window (seperti Sign-in with Google) menggunakan window.open, komunikasi postMessage, dan otomatis window.close()' : 'Mode Redirect Halaman Penuh standar'}
+- Base URL SSO Aruta: ${baseUrl}
+- Mode Login Terpilih: ${isPopup ? 'Mode Popup Window (seperti Sign-in with Google: menggunakan window.open, postMessage untuk mengirim authorization code ke window opener, dan otomatis window.close())' : 'Mode Full Page Redirect standar OAuth 2.0'}
 
-### 3. Tugas yang Harus Anda Buat:
-1. Buat modul client / helper autentikasi untuk SSO Aruta.
-2. Buat tombol login resmi "Masuk dengan Akun Aruta" dengan logo Aruta dan status loading.
-3. Buat endpoint/route callback untuk menangani pertukaran authorization code menjadi token JWT dan menarik profil lengkap pengguna (sub, name, username, email, avatar, role).
-4. Buat session management (cookie HttpOnly atau session token) agar sesi pengguna tetap tersimpan setelah login.
-5. Buat middleware proteksi rute agar halaman yang membutuhkan login tidak bisa diakses sembarangan.
-6. Buat fungsi logout yang memanggil endpoint revoke token ${baseUrl}/api/oauth/revoke.
+### 📋 TUGAS IMPLEMENTASI:
+1. Buat helper/service autentikasi SSO Aruta yang mengelola pembuatan Authorization URL (sertakan state CSRF token), penukaran code ke access token via POST ${baseUrl}/api/oauth/token, dan pengambilan profil via GET ${baseUrl}/api/oauth/userinfo.
+2. Buat komponen tombol login resmi "Masuk dengan Akun Aruta" (dengan logo perisai Aruta, state loading interaktif, dan penanganan ${isPopup ? 'popup window.open' : 'redirect'}).
+3. Tangani callback OAuth:
+   * Validasi parameter state untuk mencegah CSRF.
+   * Ambil token dan userinfo.
+   * Validasi status keaktifan: jika user.status !== 'active', tolak akses dan tampilkan pesan "Akun Anda sedang ditangguhkan oleh Administrator Aruta SSO".
+   * Simpan atau sinkronisasikan profil pengguna (sub, name, username, email, picture, role) ke session lokal / database aplikasi ini.
+4. Buat session management yang aman (HttpOnly Cookie atau signed JWT session).
+5. Buat route guard / middleware proteksi rute halaman yang membutuhkan otentikasi.
+6. Buat fitur logout yang memanggil endpoint pencabutan token (POST ${baseUrl}/api/oauth/revoke) lalu membersihkan sesi lokal.
 
-Tuliskan kode yang rapi, modular, aman dari kerentanan CSRF (gunakan parameter state), serta sertakan instruksi singkat cara mengujinya.`;
+Tuliskan kode yang bersih, modular, tangguh terhadap error jaringan, dan sertakan instruksi file .env serta panduan pengujian integrasi.`;
     }
 
     if (aiFramework === 'nextjs') {
-      return `Saya sedang membangun aplikasi Next.js (App Router). Tolong buatkan integrasi SSO Aruta menggunakan NextAuth.js (Auth.js) atau Server Actions:
+      return `Saya sedang membangun aplikasi Next.js (App Router). Tolong buatkan integrasi autentikasi SSO Aruta yang production-ready:
 
-Konfigurasi SSO Aruta:
-- Issuer Discovery URL: ${baseUrl}/.well-known/openid-configuration
+${architectureKnowledgeBlock}
+
+Konfigurasi Aplikasi:
 - Client ID: ${aiClientId}
 - Client Secret: ${aiClientSecret}
-- Callback URL: ${aiRedirectUri}
-- Scope: openid profile email
+- Redirect URI: ${aiRedirectUri}
+- Base URL SSO: ${baseUrl}
+- Mode Login: ${isPopup ? 'Popup Window (window.open + postMessage listener)' : 'Full Page Redirect'}
 
-Kebutuhan:
-1. Konfigurasikan provider Aruta SSO pada NextAuth.js (app/api/auth/[...nextauth]/route.ts).
-2. Simpan field penting ke dalam session token: id, name, username (@username), email, picture, role.
-3. Buat komponen tombol login "${isPopup ? 'Masuk via Popup' : 'Masuk dengan Akun Aruta'}".
-4. Buat middleware.ts untuk melindungi route /dashboard.
-5. Berikan file .env.local dengan variabel yang dibutuhkan.`;
+Kebutuhan Implementasi:
+1. Konfigurasikan OAuth2/OIDC provider Aruta SSO (menggunakan Auth.js / NextAuth atau custom Server Actions & Route Handler app/api/auth/callback/route.ts).
+2. Petakan seluruh user claim ke dalam session: sub/id, name, username, email, picture, role, dan status. Pastikan jika status !== 'active', sesi dibatalkan.
+3. Buat komponen UI tombol login "${isPopup ? 'Masuk via Popup Aruta' : 'Masuk dengan Akun Aruta'}" dengan visual minimalis elegan.
+4. Buat proxy/middleware (middleware.ts) untuk memproteksi route privat (misal /dashboard).
+5. Buat route handler /api/auth/logout untuk memanggil revoke token ke ${baseUrl}/api/oauth/revoke dan menghapus session cookie.
+6. Berikan template file .env.local yang siap pakai.`;
     }
 
     if (aiFramework === 'react-express') {
-      return `Tolong buatkan sistem autentikasi SSO Aruta untuk fullstack app: Frontend React (Vite) + Backend Node.js (Express):
+      return `Tolong buatkan sistem autentikasi SSO Aruta untuk fullstack app: Frontend React (Vite/Tailwind) + Backend Node.js (Express):
 
-Konfigurasi SSO Aruta:
-- Base URL SSO: ${baseUrl}
-- Authorize: ${baseUrl}/api/oauth/authorize
-- Token: ${baseUrl}/api/oauth/token
-- Userinfo: ${baseUrl}/api/oauth/userinfo
-- Revoke: ${baseUrl}/api/oauth/revoke
+${architectureKnowledgeBlock}
+
+Konfigurasi SSO:
 - Client ID: ${aiClientId}
 - Client Secret: ${aiClientSecret}
 - Redirect URI: ${aiRedirectUri}
-- Mode Login: ${isPopup ? 'Popup Window (window.open + postMessage)' : 'Full Redirect'}
+- Base URL SSO: ${baseUrl}
+- Mode: ${isPopup ? 'Popup Window (window.open + postMessage)' : 'Full Redirect'}
 
 Kebutuhan:
-1. Di Frontend React: Buat tombol login Aruta dan listener callback ${isPopup ? '(menangkap postMessage dari popup)' : '(halaman callback)'}.
-2. Di Backend Express: Buat endpoint POST /api/auth/callback untuk menukar code ke token dan mengambil userinfo, lalu simpan ke secure HttpOnly JWT cookie.
-3. Buat auth middleware di Express untuk melindungi endpoint API.
-4. Buat endpoint logout yang mencabut token ke SSO Aruta.`;
+1. Di Frontend React: Buat komponen tombol login Aruta dan listener callback ${isPopup ? '(menangkap postMessage code dari popup)' : '(route /callback)'}.
+2. Di Backend Express: Buat endpoint POST /api/auth/callback untuk menukar code ke access token, mengambil profil userinfo, dan memastikan user.status === 'active'.
+3. Simpan sesi pengguna ke dalam secure HttpOnly cookie.
+4. Buat Express Auth Middleware untuk melindungi API endpoints.
+5. Buat endpoint logout yang memanggil ${baseUrl}/api/oauth/revoke.`;
     }
 
     if (aiFramework === 'laravel') {
-      return `Tolong buatkan controller dan route integrasi SSO Aruta untuk framework PHP Laravel:
+      return `Tolong buatkan controller, route, dan session handler integrasi SSO Aruta untuk PHP Laravel:
 
-Konfigurasi SSO Aruta:
-- Base URL: ${baseUrl}
-- Authorize: ${baseUrl}/api/oauth/authorize
-- Token: ${baseUrl}/api/oauth/token
-- Userinfo: ${baseUrl}/api/oauth/userinfo
+${architectureKnowledgeBlock}
+
+Konfigurasi SSO:
 - Client ID: ${aiClientId}
 - Client Secret: ${aiClientSecret}
 - Redirect URI: ${aiRedirectUri}
+- Base URL SSO: ${baseUrl}
 
 Kebutuhan:
-1. Buat SSOController dengan method redirectToSSO() dan handleCallback().
-2. Tukar authorization code menjadi token menggunakan HTTP Client Laravel (Http::post).
-3. Ambil profil userinfo dan simpan / update data pengguna di tabel users (nama, username, email, role).
-4. Buat sesi Auth::login($user).
-5. Buat method logout() yang memanggil endpoint /api/oauth/revoke.`;
+1. Buat ArutaSSOController dengan method redirectToSSO() dan handleCallback(Request $request).
+2. Validasi CSRF state parameter.
+3. Tukar code menjadi token dengan Http::asJson()->post('${baseUrl}/api/oauth/token').
+4. Ambil profil userinfo dari '${baseUrl}/api/oauth/userinfo'.
+5. Validasi: jika status !== 'active', redirect kembali ke login dengan error 'Akun ditangguhkan'.
+6. UpdateOrCreate data pengguna di tabel users lokal (sertakan sub, name, username, email, picture, role) lalu jalankan Auth::login($user).
+7. Buat method logout() yang memanggil '${baseUrl}/api/oauth/revoke'.`;
     }
 
-    return `Tolong buatkan integrasi autentikasi SSO Aruta untuk backend Python FastAPI:
+    return `Tolong buatkan integrasi autentikasi SSO Aruta untuk backend Python (FastAPI):
 
-Konfigurasi SSO Aruta:
-- Base URL: ${baseUrl}
-- Authorize: ${baseUrl}/api/oauth/authorize
-- Token: ${baseUrl}/api/oauth/token
-- Userinfo: ${baseUrl}/api/oauth/userinfo
+${architectureKnowledgeBlock}
+
+Konfigurasi SSO:
 - Client ID: ${aiClientId}
 - Client Secret: ${aiClientSecret}
 - Redirect URI: ${aiRedirectUri}
+- Base URL SSO: ${baseUrl}
 
 Kebutuhan:
-1. Route GET /login: redirect ke URL authorize SSO Aruta dengan state CSRF.
-2. Route GET /auth/callback: terima code, panggil token endpoint via httpx, dan ambil userinfo (username, email, role).
-3. Buat JWT cookie session untuk menyimpan sesi pengguna di FastAPI.
-4. Buat dependency get_current_user untuk proteksi endpoint.
-5. Route POST /logout: revoke token ke SSO Aruta dan hapus cookie.`;
+1. Endpoint GET /login: menghasilkan URL otorisasi SSO Aruta dengan state CSRF token.
+2. Endpoint GET /auth/callback: menerima code dan state, memanggil POST ${baseUrl}/api/oauth/token menggunakan httpx, lalu memanggil GET ${baseUrl}/api/oauth/userinfo.
+3. Periksa status keaktifan user (status == 'active').
+4. Buat JWT session cookie atau token session untuk user.
+5. Buat dependency FastAPI get_current_user untuk proteksi endpoint.
+6. Endpoint POST /logout: memanggil revoke token ke Aruta SSO dan menghapus session cookie.`;
   };
 
   return (
@@ -1208,6 +1227,44 @@ export async function POST(req: Request) {
                 <span className="text-[10px] font-bold text-purple-600 uppercase tracking-wider block">Langkah 3</span>
                 <span className="text-xs font-bold text-slate-800 mt-0.5 block">Tempel ke AI Agent</span>
                 <p className="text-[11px] text-slate-500 mt-0.5">Tempel ke Cursor Composer, Antigravity, atau Claude Code CLI.</p>
+              </div>
+            </div>
+
+            {/* LLMs.txt AI Knowledge Center Banner */}
+            <div className="rounded-xl border border-purple-200 bg-purple-100/50 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-600 text-white font-bold text-xs shrink-0">
+                  AI
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-slate-900">Standard AI Knowledge Base (llms.txt)</span>
+                    <span className="rounded bg-purple-200 text-purple-800 px-1.5 py-0.5 text-[10px] font-semibold">Active</span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 mt-0.5">
+                    Anda juga bisa langsung menyuruh AI Agent (Cursor / Windsurf) membaca file: <code className="font-mono text-purple-700 font-semibold">{typeof window !== 'undefined' ? window.location.origin : 'https://accounts.aruta.id'}/llms.txt</code>
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleCopy('llms-url', `${typeof window !== 'undefined' ? window.location.origin : 'https://accounts.aruta.id'}/llms.txt`)}
+                  className="inline-flex items-center gap-1 rounded-lg border border-purple-300 bg-white px-3 py-1.5 text-xs font-semibold text-purple-700 hover:bg-purple-50 transition-colors cursor-pointer shadow-xs"
+                >
+                  {copiedKey === 'llms-url' ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5 text-purple-600" />}
+                  <span>{copiedKey === 'llms-url' ? 'Tersalin!' : 'Salin URL llms.txt'}</span>
+                </button>
+                <a
+                  href="/llms.txt"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 rounded-lg bg-purple-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-purple-700 transition-colors"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  <span>Buka llms.txt</span>
+                </a>
               </div>
             </div>
           </div>

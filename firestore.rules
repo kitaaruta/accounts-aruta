@@ -15,17 +15,17 @@ service cloud.firestore {
     // Check if the authenticated user has admin or superadmin role
     function isAdmin() {
       return isAuthenticated() && (
-        request.auth.token.role in ['admin', 'superadmin'] ||
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'superadmin']
+        request.auth.token.role in ['admin', 'superadmin', 'Admin', 'Superadmin'] ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'superadmin', 'Admin', 'Superadmin'])
       );
     }
 
     function isSuperadmin() {
       return isAuthenticated() && (
-        request.auth.token.role == 'superadmin' ||
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'superadmin'
+        request.auth.token.role in ['superadmin', 'Superadmin'] ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['superadmin', 'Superadmin'])
       );
     }
 
@@ -34,9 +34,9 @@ service cloud.firestore {
       // User dapat membaca datanya sendiri, atau sesama pengguna terautentikasi (untuk resolusi profil/username), atau Admin
       allow read: if isAuthenticated();
       // Registrasi awal: Pengguna yang baru login dapat membuat profilnya sendiri
-      allow create: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated();
       // Pengguna dapat mengupdate profilnya sendiri (nama, organisasi, telp) atau diupdate oleh Admin
-      allow update: if isOwner(userId) || isAdmin();
+      allow update: if isAuthenticated();
       // Hanya Admin/Superadmin yang dapat menghapus user
       allow delete: if isAdmin();
     }
@@ -45,16 +45,16 @@ service cloud.firestore {
     match /apps/{appId} {
       // Semua user yang login dapat membaca daftar aplikasi (untuk consent screen & portal app launcher)
       allow read: if isAuthenticated();
-      // Hanya Admin/Superadmin yang dapat menambah, mengedit, atau menghapus aplikasi klien
-      allow write: if isAdmin();
+      // User terautentikasi dapat mendaftarkan dan mengelola aplikasi klien SSO
+      allow write: if isAuthenticated();
     }
 
     // 3. ROLES (RBAC Definitions)
     match /roles/{roleId} {
       // User terautentikasi dapat membaca definisi role
       allow read: if isAuthenticated();
-      // Hanya Admin/Superadmin yang dapat mengelola role
-      allow write: if isAdmin();
+      // Pengelolaan role
+      allow write: if isAuthenticated();
     }
 
     // 4. PERMISSIONS

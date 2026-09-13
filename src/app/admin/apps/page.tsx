@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { 
@@ -28,6 +29,7 @@ export default function AdminAppsManagementPage() {
   const [apps, setApps] = useState<RegisteredApp[]>([]);
   const [loading, setLoading] = useState(true);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -45,6 +47,7 @@ export default function AdminAppsManagementPage() {
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   useEffect(() => {
+    setMounted(true);
     loadApps();
   }, []);
 
@@ -108,23 +111,33 @@ export default function AdminAppsManagementPage() {
 
   const handleSaveModal = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formName.trim()) {
+      showNotification('error', 'Nama aplikasi wajib diisi.');
+      return;
+    }
+
+    const uris = formRedirectUris.split('\n').map(u => u.trim()).filter(Boolean);
+    const scopes = formScopes.split(',').map(s => s.trim()).filter(Boolean);
+
+    if (uris.length === 0) {
+      showNotification('error', 'Harap masukkan minimal satu Redirect URI yang valid.');
+      return;
+    }
+
     setSaving(true);
     try {
-      const uris = formRedirectUris.split('\n').map(u => u.trim()).filter(Boolean);
-      const scopes = formScopes.split(',').map(s => s.trim()).filter(Boolean);
-
       if (modalMode === 'create') {
         const randId = Math.random().toString(36).substring(2, 8);
         const newClientId = 'aruta_app_' + randId;
         const newClientSecret = 'sec_live_' + Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
         const newApp: RegisteredApp = {
           id: 'app-' + randId,
-          name: formName,
-          description: formDesc,
+          name: formName.trim(),
+          description: formDesc.trim(),
           clientId: newClientId,
           clientSecret: newClientSecret,
           redirectUris: uris,
-          allowedScopes: scopes,
+          allowedScopes: scopes.length > 0 ? scopes : ['openid', 'profile', 'email'],
           isActive: formIsActive,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -135,10 +148,10 @@ export default function AdminAppsManagementPage() {
       } else if (selectedApp) {
         const updated: RegisteredApp = {
           ...selectedApp,
-          name: formName,
-          description: formDesc,
+          name: formName.trim(),
+          description: formDesc.trim(),
           redirectUris: uris,
-          allowedScopes: scopes,
+          allowedScopes: scopes.length > 0 ? scopes : ['openid', 'profile', 'email'],
           isActive: formIsActive,
           updatedAt: new Date().toISOString(),
         };
@@ -148,8 +161,10 @@ export default function AdminAppsManagementPage() {
       }
       setIsModalOpen(false);
       await loadApps();
-    } catch (e) {
-      showNotification('error', 'Gagal menyimpan konfigurasi aplikasi.');
+    } catch (err: unknown) {
+      console.error('Error saving app:', err);
+      const msg = err instanceof Error ? err.message : 'Gagal menyimpan konfigurasi aplikasi.';
+      showNotification('error', `Gagal menyimpan: ${msg}`);
     } finally {
       setSaving(false);
     }
@@ -328,17 +343,17 @@ export default function AdminAppsManagementPage() {
           )}
         </div>
 
-        {/* Modal Create/Edit App */}
-        {isModalOpen && (
+        {/* Modal Create/Edit App rendered via Portal */}
+        {isModalOpen && mounted && createPortal(
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-            <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-xl">
+            <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-xl animate-in fade-in zoom-in-95 duration-150">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
                 <h3 className="text-base font-bold text-slate-900">
                   {modalMode === 'create' ? 'Daftarkan Aplikasi Klien SSO Baru' : `Edit Konfigurasi: ${selectedApp?.name}`}
                 </h3>
                 <button
                   onClick={() => setIsModalOpen(false)}
-                  className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                  className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 cursor-pointer"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -408,7 +423,7 @@ export default function AdminAppsManagementPage() {
                     id="appActive"
                     checked={formIsActive}
                     onChange={(e) => setFormIsActive(e.target.checked)}
-                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                   />
                   <label htmlFor="appActive" className="text-xs font-semibold text-slate-700 cursor-pointer">
                     Aktifkan aplikasi (dapat meminta autorisasi SSO)
@@ -419,7 +434,7 @@ export default function AdminAppsManagementPage() {
                   <button
                     type="button"
                     onClick={() => setIsModalOpen(false)}
-                    className="rounded-lg border border-slate-200 px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors"
+                    className="rounded-lg border border-slate-200 px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
                   >
                     Batal
                   </button>
@@ -433,7 +448,8 @@ export default function AdminAppsManagementPage() {
                 </div>
               </form>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
       </div>
     </DashboardLayout>

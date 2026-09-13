@@ -631,9 +631,12 @@ export async function deletePermission(permId: string): Promise<void> {
 // REGISTERED OAUTH APPS REPOSITORY
 // ----------------------------------------------------
 export async function listRegisteredApps(): Promise<RegisteredApp[]> {
+  const localApps = getLocalItem<RegisteredApp[]>('apps', defaultApps);
+
   if (typeof window === 'undefined') {
     if (isFirebaseConfigured()) {
-      return await fetchFirestoreCollectionREST<RegisteredApp>('apps');
+      const remoteApps = await fetchFirestoreCollectionREST<RegisteredApp>('apps');
+      return remoteApps.length > 0 ? remoteApps : defaultApps;
     }
     return defaultApps;
   }
@@ -643,28 +646,42 @@ export async function listRegisteredApps(): Promise<RegisteredApp[]> {
     try {
       const { fs, db } = f;
       const snap = await fs.getDocs(fs.collection(db, 'apps'));
-      return snap.docs.map(d => d.data() as RegisteredApp);
+      if (!snap.empty) {
+        const firestoreApps = snap.docs.map(d => d.data() as RegisteredApp);
+        // Combine Firestore apps with any local apps
+        const map = new Map<string, RegisteredApp>();
+        localApps.forEach(a => map.set(a.id, a));
+        firestoreApps.forEach(a => map.set(a.id, a));
+        const merged = Array.from(map.values());
+        setLocalItem('apps', merged);
+        return merged;
+      } else {
+        // If Firestore apps collection is empty, seed defaultApps
+        try {
+          for (const a of defaultApps) {
+            await fs.setDoc(fs.doc(db, 'apps', a.id), cleanData(a as unknown as Record<string, unknown>), { merge: true });
+          }
+        } catch (seedErr) {
+          console.warn('[SSO Firestore] Auto-seed apps warning:', seedErr);
+        }
+        return localApps;
+      }
     } catch (e) {
       console.error('[SSO Firestore] listRegisteredApps error:', e);
-      if (isFirebaseConfigured()) {
-        return [];
-      }
+      return localApps;
     }
   }
 
-  if (isFirebaseConfigured()) {
-    return [];
-  }
-
-  const apps = getLocalItem<RegisteredApp[]>('apps', defaultApps);
-  return apps;
+  return localApps;
 }
 
 export async function getAppByClientId(clientId: string): Promise<RegisteredApp | null> {
   if (typeof window === 'undefined') {
     if (isFirebaseConfigured()) {
       const apps = await fetchFirestoreCollectionREST<RegisteredApp>('apps');
-      return apps.find(a => a.clientId === clientId && a.isActive) || null;
+      const found = apps.find(a => a.clientId === clientId && a.isActive);
+      if (found) return found;
+      return defaultApps.find(a => a.clientId === clientId && a.isActive) || null;
     }
     return defaultApps.find(a => a.clientId === clientId && a.isActive) || null;
   }
@@ -682,9 +699,6 @@ export async function getAppByClientId(clientId: string): Promise<RegisteredApp 
     } catch (e) {
       console.error('[SSO Firestore] getAppByClientId error:', e);
     }
-    if (isFirebaseConfigured()) {
-      return null;
-    }
   }
 
   const apps = await listRegisteredApps();
@@ -692,41 +706,49 @@ export async function getAppByClientId(clientId: string): Promise<RegisteredApp 
 }
 
 export async function saveRegisteredApp(appData: RegisteredApp): Promise<void> {
-  const f = await getFirestoreModule();
-  if (f) {
-    try {
-      const { fs, db } = f;
-      await fs.setDoc(fs.doc(db, 'apps', appData.id), cleanData(appData as unknown as Record<string, unknown>), { merge: true });
-      return;
-    } catch (e) {
-      console.error('[SSO Firestore] saveRegisteredApp failed, fallback to local store:', e);
-    }
-  }
-
+  // 1. Save to localStorage immediately so UI updates instantly
   const apps = getLocalItem<RegisteredApp[]>('apps', defaultApps);
   const idx = apps.findIndex(a => a.id === appData.id);
   if (idx >= 0) {
     apps[idx] = { ...apps[idx], ...appData, updatedAt: new Date().toISOString() };
   } else {
-    apps.push(appData);
+    apps.unshift({ ...appData, updatedAt: new Date().toISOString() });
   }
   setLocalItem('apps', apps);
+
+  // 2. Persist to Firestore
+  const f = await getFirestoreModule();
+  if (f) {
+    try {
+      const { fs, db } = f;
+      const payload = cleanData({
+        ...appData,
+        updatedAt: new Date().toISOString(),
+      });
+      await fs.setDoc(fs.doc(db, 'apps', appData.id), payload, { merge: true });
+    } catch (e) {
+      console.error('[SSO Firestore] saveRegisteredApp failed:', e);
+      throw e;
+    }
+  }
 }
 
 export async function deleteRegisteredApp(appId: string): Promise<void> {
+  // 1. Remove from local store immediately
+  const apps = getLocalItem<RegisteredApp[]>('apps', defaultApps).filter(a => a.id !== appId);
+  setLocalItem('apps', apps);
+
+  // 2. Remove from Firestore
   const f = await getFirestoreModule();
   if (f) {
     try {
       const { fs, db } = f;
       await fs.deleteDoc(fs.doc(db, 'apps', appId));
-      return;
     } catch (e) {
-      console.warn('Firestore deleteRegisteredApp fallback', e);
+      console.error('[SSO Firestore] deleteRegisteredApp failed:', e);
+      throw e;
     }
   }
-
-  const apps = getLocalItem<RegisteredApp[]>('apps', defaultApps).filter(a => a.id !== appId);
-  setLocalItem('apps', apps);
 }
 
 // ----------------------------------------------------

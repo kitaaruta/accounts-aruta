@@ -59,10 +59,15 @@ async function handleUserInfo(request: NextRequest) {
     email: payload.email,
     email_verified: emailVerified,
     emailVerified: emailVerified,
+    picture: userProfile?.photoURL || undefined,
+    photoURL: userProfile?.photoURL || undefined,
+    avatar: userProfile?.photoURL || undefined,
     role: role,
     status: userProfile?.status || 'active',
     company: userProfile?.company || '',
     title: userProfile?.title || '',
+    custom_fields: userProfile?.customFields || {},
+    customFields: userProfile?.customFields || {},
     aud: payload.clientId,
   };
 

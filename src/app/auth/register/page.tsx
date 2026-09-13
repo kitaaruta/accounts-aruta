@@ -5,8 +5,8 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { resolveOAuthRedirect, buildAuthLink } from '@/lib/auth/oauth-flow';
-import { isUsernameAvailable, getAppByClientId } from '@/lib/services/firestore-service';
-import { RegisteredApp } from '@/types/sso';
+import { isUsernameAvailable, getAppByClientId, getMasterCustomFields } from '@/lib/services/firestore-service';
+import { RegisteredApp, AppCustomField } from '@/types/sso';
 import { 
   ShieldCheck, 
   Mail, 
@@ -21,7 +21,8 @@ import {
   Loader2, 
   Check, 
   XCircle,
-  AppWindow
+  AppWindow,
+  Sparkles
 } from 'lucide-react';
 import { AvatarUpload } from '@/components/profile/AvatarUpload';
 import { uploadProfilePhoto } from '@/lib/services/storage-service';
@@ -47,8 +48,16 @@ function RegisterContent() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [targetApp, setTargetApp] = useState<RegisteredApp | null>(null);
+  const [masterFields, setMasterFields] = useState<AppCustomField[]>([]);
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
 
   const redirectInfo = resolveOAuthRedirect(searchParams);
+
+  useEffect(() => {
+    getMasterCustomFields()
+      .then((fields) => setMasterFields(fields))
+      .catch((err) => console.warn('Failed to load master custom fields:', err));
+  }, []);
 
   useEffect(() => {
     if (redirectInfo.clientId) {
@@ -101,6 +110,10 @@ function RegisterContent() {
     return () => clearTimeout(timer);
   }, [username]);
 
+  const activeRequiredFields = masterFields.filter((f) =>
+    targetApp?.requiredCustomFields?.includes(f.key)
+  );
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullName || !username || !email || !password) {
@@ -129,6 +142,14 @@ function RegisterContent() {
       return;
     }
 
+    // Validate any required custom fields for target app
+    for (const field of activeRequiredFields) {
+      if (field.required && (!customFieldValues[field.key] || !customFieldValues[field.key].trim())) {
+        setError(`Harap isi bidang "${field.label}" yang dibutuhkan oleh ${targetApp?.name || 'aplikasi'}.`);
+        return;
+      }
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -153,7 +174,14 @@ function RegisterContent() {
         }
       }
 
-      await register(email, password, fullName, cleanUser, uploadedPhotoURL);
+      await register(
+        email, 
+        password, 
+        fullName, 
+        cleanUser, 
+        uploadedPhotoURL, 
+        Object.keys(customFieldValues).length > 0 ? customFieldValues : undefined
+      );
       setSuccess(true);
       setTimeout(() => {
         router.push(redirectInfo.targetUrl);
@@ -394,6 +422,76 @@ function RegisterContent() {
                 />
               </div>
             </div>
+
+            {/* Custom App Specific Fields */}
+            {activeRequiredFields.length > 0 && (
+              <div className="rounded-xl border border-purple-200 bg-purple-50/40 p-4 space-y-3.5 my-2">
+                <div className="flex items-start gap-2.5">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-md bg-purple-600 text-white shrink-0 shadow-xs mt-0.5">
+                    <Sparkles className="h-3.5 w-3.5" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold text-slate-900">
+                      Informasi Khusus {targetApp?.name || 'Aplikasi'}
+                    </h3>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      Aplikasi ini memerlukan beberapa informasi tambahan untuk melengkapi profil kontribusi Anda.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-3 pt-1 border-t border-purple-100">
+                  {activeRequiredFields.map((field) => (
+                    <div key={field.key}>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-semibold text-slate-700">
+                          {field.label}
+                          {field.required && <span className="text-rose-500 ml-1">*</span>}
+                        </label>
+                        {field.description && (
+                          <span className="text-[10px] text-slate-400">{field.description}</span>
+                        )}
+                      </div>
+
+                      {field.type === 'select' && field.options && field.options.length > 0 ? (
+                        <select
+                          value={customFieldValues[field.key] || ''}
+                          onChange={(e) =>
+                            setCustomFieldValues((prev) => ({
+                              ...prev,
+                              [field.key]: e.target.value,
+                            }))
+                          }
+                          required={field.required}
+                          className="w-full rounded-lg border border-slate-200 bg-white py-2 px-3 text-xs text-slate-800 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+                        >
+                          <option value="">-- Pilih {field.label} --</option>
+                          {field.options.map((opt) => (
+                            <option key={opt} value={opt}>
+                              {opt}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          type={field.type === 'number' ? 'number' : field.type === 'tel' ? 'tel' : 'text'}
+                          value={customFieldValues[field.key] || ''}
+                          onChange={(e) =>
+                            setCustomFieldValues((prev) => ({
+                              ...prev,
+                              [field.key]: e.target.value,
+                            }))
+                          }
+                          placeholder={field.placeholder || `Masukkan ${field.label}`}
+                          required={field.required}
+                          className="w-full rounded-lg border border-slate-200 bg-white py-2 px-3 text-xs text-slate-800 placeholder:text-slate-400 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <button
               type="submit"

@@ -1,4 +1,12 @@
-export type UserRole = string;
+export interface AppCustomField {
+  key: string;
+  label: string;
+  type: 'text' | 'select' | 'tel' | 'number';
+  placeholder?: string;
+  description?: string;
+  options?: string[];
+  required?: boolean;
+}
 
 export interface SSOUser {
   uid: string;
@@ -13,6 +21,7 @@ export interface SSOUser {
   phoneNumber?: string;
   company?: string;
   title?: string;
+  customFields?: Record<string, string>;
   createdAt: string;
   updatedAt: string;
   lastLoginAt?: string;
@@ -46,6 +55,7 @@ export interface RegisteredApp {
   logoUrl?: string;
   isActive: boolean;
   allowedScopes: string[];
+  requiredCustomFields?: string[]; // Keys of custom fields requested by this app
   createdAt: string;
   updatedAt?: string;
 }

@@ -3,8 +3,8 @@
 import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
-import { getAppByClientId } from '@/lib/services/firestore-service';
-import { RegisteredApp } from '@/types/sso';
+import { getAppByClientId, getMasterCustomFields } from '@/lib/services/firestore-service';
+import { RegisteredApp, AppCustomField } from '@/types/sso';
 import { 
   ShieldCheck, 
   User, 
@@ -17,13 +17,14 @@ import {
   AppWindow,
   ExternalLink,
   ShieldAlert,
-  Building2
+  Building2,
+  Sparkles
 } from 'lucide-react';
 
 function ConsentContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { userProfile, loading: authLoading, logout } = useAuth();
+  const { userProfile, loading: authLoading, logout, updateProfileData } = useAuth();
 
   const clientId = searchParams.get('client_id');
   const redirectUri = searchParams.get('redirect_uri');
@@ -31,6 +32,9 @@ function ConsentContent() {
   const state = searchParams.get('state') || '';
 
   const [app, setApp] = useState<RegisteredApp | null>(null);
+  const [masterFields, setMasterFields] = useState<AppCustomField[]>([]);
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
+  const [fieldValidationError, setFieldValidationError] = useState<string | null>(null);
   const [loadingApp, setLoadingApp] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [approving, setApproving] = useState(false);
@@ -38,6 +42,21 @@ function ConsentContent() {
 
   // Check if opened as popup
   const isPopup = searchParams.get('display') === 'popup' || (typeof window !== 'undefined' && !!window.opener);
+
+  useEffect(() => {
+    getMasterCustomFields()
+      .then(setMasterFields)
+      .catch((err) => console.warn('Failed to load master custom fields:', err));
+  }, []);
+
+  useEffect(() => {
+    if (userProfile?.customFields) {
+      setCustomFieldValues((prev) => ({
+        ...prev,
+        ...userProfile.customFields,
+      }));
+    }
+  }, [userProfile]);
 
   useEffect(() => {
     async function loadApp() {
@@ -78,7 +97,7 @@ function ConsentContent() {
     }
 
     loadApp();
-  }, [clientId, redirectUri]);
+  }, [clientId, redirectUri, router, searchParams]);
 
   // If not logged in, redirect to login page with return URL
   useEffect(() => {
@@ -88,9 +107,37 @@ function ConsentContent() {
     }
   }, [authLoading, userProfile, router]);
 
+  const appCustomFields = masterFields.filter((f) =>
+    app?.requiredCustomFields?.includes(f.key)
+  );
+
   const handleApprove = async () => {
     if (!app || !userProfile || !redirectUri) return;
+
+    // Validate required custom fields for this app
+    for (const field of appCustomFields) {
+      if (field.required && (!customFieldValues[field.key] || !customFieldValues[field.key].trim())) {
+        setFieldValidationError(`Harap lengkapi bidang "${field.label}" yang dibutuhkan oleh ${app.name}.`);
+        return;
+      }
+    }
+    setFieldValidationError(null);
+
     setApproving(true);
+
+    // Persist custom fields if there are values
+    if (Object.keys(customFieldValues).length > 0) {
+      try {
+        await updateProfileData({
+          customFields: {
+            ...(userProfile.customFields || {}),
+            ...customFieldValues,
+          },
+        });
+      } catch (err) {
+        console.warn('Failed to update profile custom fields in consent:', err);
+      }
+    }
 
     const authorizeUrl = new URL('/api/oauth/authorize', window.location.origin);
     authorizeUrl.searchParams.set('client_id', app.clientId);
@@ -338,6 +385,81 @@ function ConsentContent() {
             Kata sandi Anda tidak akan pernah dibagikan kepada aplikasi ini. Akses dapat dicabut kapan saja melalui Portal Admin.
           </p>
         </div>
+
+        {/* Custom fields required by this app */}
+        {appCustomFields.length > 0 && (
+          <div className="mb-5 rounded-xl border border-purple-200 bg-purple-50/40 p-4 space-y-3">
+            <div className="flex items-start gap-2">
+              <div className="flex h-5 w-5 items-center justify-center rounded-md bg-purple-600 text-white shrink-0 shadow-xs mt-0.5">
+                <Sparkles className="h-3 w-3" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-900">
+                  Data Tambahan untuk {app.name}
+                </p>
+                <p className="text-[11px] text-slate-500">
+                  Aplikasi ini memerlukan beberapa informasi spesifik untuk profil kontribusi Anda:
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2.5 pt-1 border-t border-purple-100">
+              {appCustomFields.map((field) => (
+                <div key={field.key}>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-semibold text-slate-700">
+                      {field.label}
+                      {field.required && <span className="text-rose-500 ml-1">*</span>}
+                    </label>
+                    {field.description && (
+                      <span className="text-[10px] text-slate-400">{field.description}</span>
+                    )}
+                  </div>
+
+                  {field.type === 'select' && field.options && field.options.length > 0 ? (
+                    <select
+                      value={customFieldValues[field.key] || ''}
+                      onChange={(e) =>
+                        setCustomFieldValues((prev) => ({
+                          ...prev,
+                          [field.key]: e.target.value,
+                        }))
+                      }
+                      className="w-full rounded-lg border border-slate-200 bg-white py-1.5 px-2.5 text-xs text-slate-800 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+                    >
+                      <option value="">-- Pilih {field.label} --</option>
+                      {field.options.map((opt) => (
+                        <option key={opt} value={opt}>
+                          {opt}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type={field.type === 'number' ? 'number' : field.type === 'tel' ? 'tel' : 'text'}
+                      value={customFieldValues[field.key] || ''}
+                      onChange={(e) =>
+                        setCustomFieldValues((prev) => ({
+                          ...prev,
+                          [field.key]: e.target.value,
+                        }))
+                      }
+                      placeholder={field.placeholder || `Masukkan ${field.label}`}
+                      className="w-full rounded-lg border border-slate-200 bg-white py-1.5 px-2.5 text-xs text-slate-800 placeholder:text-slate-400 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {fieldValidationError && (
+          <div className="mb-4 flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50/80 p-2.5 text-xs text-rose-700">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            <span>{fieldValidationError}</span>
+          </div>
+        )}
 
         {/* Action Buttons */}
         <div className="pt-3 border-t border-slate-100 flex items-center gap-2.5">

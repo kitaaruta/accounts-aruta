@@ -44,7 +44,7 @@ service cloud.firestore {
     // 2. APPS (OAuth2 Client Applications)
     match /apps/{appId} {
       // Semua user yang login dapat membaca daftar aplikasi (untuk consent screen & portal app launcher)
-      allow read: if isAuthenticated();
+      allow read: if true;
       // User terautentikasi dapat mendaftarkan dan mengelola aplikasi klien SSO
       allow write: if isAuthenticated();
     }

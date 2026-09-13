@@ -8,9 +8,10 @@ import {
   listRegisteredApps, 
   saveRegisteredApp, 
   deleteRegisteredApp,
+  getMasterCustomFields,
   logSSOEvent 
 } from '@/lib/services/firestore-service';
-import { RegisteredApp } from '@/types/sso';
+import { RegisteredApp, AppCustomField } from '@/types/sso';
 import { 
   AppWindow, 
   Plus, 
@@ -22,11 +23,13 @@ import {
   AlertCircle, 
   X, 
   Globe,
-  Code2 
+  Code2,
+  FileCheck 
 } from 'lucide-react';
 
 export default function AdminAppsManagementPage() {
   const [apps, setApps] = useState<RegisteredApp[]>([]);
+  const [masterFields, setMasterFields] = useState<AppCustomField[]>([]);
   const [loading, setLoading] = useState(true);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -42,6 +45,7 @@ export default function AdminAppsManagementPage() {
   const [formRedirectUris, setFormRedirectUris] = useState('');
   const [formScopes, setFormScopes] = useState('openid, profile, email');
   const [formIsActive, setFormIsActive] = useState(true);
+  const [formSelectedFields, setFormSelectedFields] = useState<string[]>([]);
 
   const [saving, setSaving] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -54,8 +58,12 @@ export default function AdminAppsManagementPage() {
   const loadApps = async () => {
     try {
       setLoading(true);
-      const data = await listRegisteredApps();
-      setApps(data);
+      const [appsData, fieldsData] = await Promise.all([
+        listRegisteredApps(),
+        getMasterCustomFields(),
+      ]);
+      setApps(appsData);
+      setMasterFields(fieldsData);
     } catch (e) {
       console.error('Failed loading apps:', e);
     } finally {
@@ -82,6 +90,7 @@ export default function AdminAppsManagementPage() {
     setFormRedirectUris('https://riset.aruta.id/auth/callback');
     setFormScopes('openid, profile, email');
     setFormIsActive(true);
+    setFormSelectedFields([]);
     setIsModalOpen(true);
   };
 
@@ -93,6 +102,7 @@ export default function AdminAppsManagementPage() {
     setFormRedirectUris(app.redirectUris.join('\n'));
     setFormScopes(app.allowedScopes.join(', '));
     setFormIsActive(app.isActive);
+    setFormSelectedFields(app.requiredCustomFields || []);
     setIsModalOpen(true);
   };
 
@@ -168,6 +178,7 @@ export default function AdminAppsManagementPage() {
           clientSecret: newClientSecret,
           redirectUris: uris,
           allowedScopes: scopes.length > 0 ? scopes : ['openid', 'profile', 'email'],
+          requiredCustomFields: formSelectedFields,
           isActive: formIsActive,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -182,6 +193,7 @@ export default function AdminAppsManagementPage() {
           description: formDesc.trim(),
           redirectUris: uris,
           allowedScopes: scopes.length > 0 ? scopes : ['openid', 'profile', 'email'],
+          requiredCustomFields: formSelectedFields,
           isActive: formIsActive,
           updatedAt: new Date().toISOString(),
         };
@@ -310,6 +322,27 @@ export default function AdminAppsManagementPage() {
                           </span>
                         ))}
                       </div>
+
+                      {/* Required Dynamic Fields */}
+                      {app.requiredCustomFields && app.requiredCustomFields.length > 0 && (
+                        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                          <span className="text-[11px] text-purple-600 font-medium flex items-center gap-1">
+                            <FileCheck className="h-3 w-3" />
+                            <span>Form Tambahan:</span>
+                          </span>
+                          {app.requiredCustomFields.map((fKey) => {
+                            const fieldDef = masterFields.find(f => f.key === fKey);
+                            return (
+                              <span
+                                key={fKey}
+                                className="rounded-md bg-purple-50 px-2 py-0.5 text-[10px] font-medium text-purple-700 border border-purple-200"
+                              >
+                                {fieldDef?.label || fKey}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -446,16 +479,57 @@ export default function AdminAppsManagementPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Cakupan Izin (Allowed Scopes)
-                  </label>
-                  <input
-                    type="text"
-                    value={formScopes}
-                    onChange={(e) => setFormScopes(e.target.value)}
-                    placeholder="openid, profile, email, roles"
-                    className="w-full rounded-lg border border-slate-200 bg-white py-2 px-3 text-xs text-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                  />
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-semibold text-slate-700">
+                      Formulir Tambahan Profil (App-Specific Fields)
+                    </label>
+                    <span className="text-[10px] text-purple-600 font-medium bg-purple-50 px-2 py-0.5 rounded border border-purple-100">
+                      Dinamis saat SSO
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mb-2.5">
+                    Centang formulir khusus yang wajib diisi oleh pengguna saat mendaftar/login ke aplikasi ini:
+                  </p>
+
+                  <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50/70 p-3">
+                    {masterFields.map((field) => {
+                      const isChecked = formSelectedFields.includes(field.key);
+                      return (
+                        <label
+                          key={field.key}
+                          className={`flex items-start gap-2.5 p-2 rounded-lg border text-xs cursor-pointer transition-colors ${
+                            isChecked
+                              ? 'bg-white border-purple-300 shadow-2xs'
+                              : 'bg-white/60 border-slate-200 hover:bg-white'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setFormSelectedFields([...formSelectedFields, field.key]);
+                              } else {
+                                setFormSelectedFields(formSelectedFields.filter((k) => k !== field.key));
+                              }
+                            }}
+                            className="mt-0.5 h-3.5 w-3.5 rounded border-slate-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
+                          />
+                          <div className="space-y-0.5 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-slate-800">{field.label}</span>
+                              <span className="text-[10px] font-mono text-slate-400">({field.key})</span>
+                            </div>
+                            {field.description && (
+                              <p className="text-[10px] text-slate-500 leading-tight">
+                                {field.description}
+                              </p>
+                            )}
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-2 pt-2">

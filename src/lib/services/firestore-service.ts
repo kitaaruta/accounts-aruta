@@ -6,7 +6,8 @@ import {
   SSOPermission, 
   RegisteredApp, 
   SSOSettings, 
-  SSOAuditLog 
+  SSOAuditLog,
+  AppCustomField
 } from '@/types/sso';
 
 // In-Memory & LocalStorage Cache fallback for zero-config offline or dev testing
@@ -161,6 +162,67 @@ const defaultRoles: SSORole[] = [
 ];
 
 const defaultApps: RegisteredApp[] = [];
+
+export const defaultMasterCustomFields: AppCustomField[] = [
+  {
+    key: 'dialect',
+    label: 'Ragam / Sub-Dialek Bahasa Dayak',
+    type: 'select',
+    placeholder: 'Pilih dialek yang Anda kuasai...',
+    description: 'Relevan untuk kontributor Kamus & Preservasi Bahasa Dayak Arut',
+    options: ['Arut Hulu', 'Arut Hilir / Tengah', 'Delang / Belantikan', 'Tamuan', 'Ngaju / Kahayan', 'Lainnya / Luar Daerah'],
+    required: true,
+  },
+  {
+    key: 'origin_village',
+    label: 'Asal Desa / Wilayah Adat',
+    type: 'text',
+    placeholder: 'Contoh: Desa Sambi, Sukarami, Pandau, Gandis...',
+    description: 'Pemetaan domisili asal penutur & riset bentang kebudayaan',
+    required: false,
+  },
+  {
+    key: 'organization',
+    label: 'Instansi / Komunitas / Kampus',
+    type: 'text',
+    placeholder: 'Contoh: Universitas Palangka Raya / Sanggar Seni Arut...',
+    description: 'Afiliasi akademik atau komunitas budaya Anda',
+    required: false,
+  },
+  {
+    key: 'expertise',
+    label: 'Bidang Keahlian / Minat',
+    type: 'select',
+    placeholder: 'Pilih bidang fokus...',
+    description: 'Fokus kontribusi di ekosistem Aruta',
+    options: ['Penutur Asli / Tetua Adat', 'Peneliti / Akademisi', 'Penggiat Budaya & Seni', 'Pemuda & Komunitas Lokal', 'Pemerhati Umum'],
+    required: false,
+  },
+  {
+    key: 'whatsapp_number',
+    label: 'Nomor WhatsApp / Kontak',
+    type: 'tel',
+    placeholder: 'Contoh: 081234567890',
+    description: 'Koordinasi kegiatan lapangan dan verifikasi kontribusi',
+    required: false,
+  }
+];
+
+export async function getMasterCustomFields(): Promise<AppCustomField[]> {
+  const f = await getFirestoreModule();
+  if (f) {
+    try {
+      const { fs, db } = f;
+      const snap = await fs.getDocs(fs.collection(db, 'custom_fields'));
+      if (!snap.empty) {
+        return snap.docs.map(d => d.data() as AppCustomField);
+      }
+    } catch (e) {
+      console.warn('[SSO Firestore] getMasterCustomFields fallback:', e);
+    }
+  }
+  return getLocalItem<AppCustomField[]>('custom_fields', defaultMasterCustomFields);
+}
 
 const defaultSettings: SSOSettings = {
   appName: 'Aruta Single Sign-On',

@@ -25,7 +25,14 @@ interface AuthContextType {
   userProfile: SSOUser | null;
   loading: boolean;
   login: (email: string, pass: string) => Promise<void>;
-  register: (email: string, pass: string, name: string, username: string, photoURL?: string) => Promise<void>;
+  register: (
+    email: string, 
+    pass: string, 
+    name: string, 
+    username: string, 
+    photoURL?: string,
+    customFields?: Record<string, string>
+  ) => Promise<void>;
   logout: () => Promise<void>;
   forgotPassword: (email: string) => Promise<void>;
   resetPassword: (code: string, newPass: string) => Promise<void>;
@@ -169,7 +176,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const register = async (email: string, pass: string, name: string, username: string, photoURL?: string) => {
+  const register = async (
+    email: string, 
+    pass: string, 
+    name: string, 
+    username: string, 
+    photoURL?: string,
+    customFields?: Record<string, string>
+  ) => {
     setLoading(true);
     try {
       const cleanUsername = username.replace(/^@/, '').toLowerCase().trim();
@@ -188,6 +202,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           role: 'Member',
           status: 'active',
           emailVerified: false,
+          customFields: customFields || undefined,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           lastLoginAt: new Date().toISOString(),
@@ -205,6 +220,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           role: 'Member',
           status: 'active',
           emailVerified: true,
+          customFields: customFields || undefined,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           lastLoginAt: new Date().toISOString(),

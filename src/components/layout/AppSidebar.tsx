@@ -16,7 +16,8 @@ import {
   Layers,
   ShieldCheck,
   ChevronRight,
-  Code2
+  Code2,
+  SlidersHorizontal
 } from 'lucide-react';
 
 interface NavItem {
@@ -29,6 +30,7 @@ const adminNavItems: NavItem[] = [
   { label: 'Dashboard Admin', href: '/admin', icon: LayoutDashboard },
   { label: 'Manajemen Pengguna', href: '/admin/users', icon: Users },
   { label: 'Aplikasi Terdaftar', href: '/admin/apps', icon: AppWindow },
+  { label: 'Form Profil Kustom', href: '/admin/custom-fields', icon: SlidersHorizontal },
   { label: 'Peran (Roles)', href: '/admin/roles', icon: Shield },
   { label: 'Hak Akses (Permissions)', href: '/admin/permissions', icon: Key },
   { label: 'Dokumentasi Developer', href: '/admin/docs', icon: Code2 },

@@ -1,4 +1,5 @@
 export interface AppCustomField {
+  id?: string;
   key: string;
   label: string;
   type: 'text' | 'select' | 'tel' | 'number';
@@ -6,6 +7,9 @@ export interface AppCustomField {
   description?: string;
   options?: string[];
   required?: boolean;
+  isSystemField?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface SSOUser {
@@ -86,7 +90,7 @@ export interface SSOAuditLog {
   id: string;
   userId: string;
   userEmail: string;
-  action: 'login' | 'logout' | 'register' | 'password_reset' | 'app_authorized' | 'user_created' | 'user_updated' | 'user_deleted' | 'role_assigned';
+  action: 'login' | 'logout' | 'register' | 'password_reset' | 'app_authorized' | 'app_revoked' | 'user_created' | 'user_updated' | 'user_deleted' | 'role_assigned';
   detail: string;
   ipAddress?: string;
   userAgent?: string;

@@ -49,6 +49,14 @@ service cloud.firestore {
       allow write: if isAuthenticated();
     }
 
+    // 2b. CUSTOM FIELDS (Katalog Form Tambahan Profil Klien)
+    match /custom_fields/{fieldId} {
+      // Siapapun dapat membaca definisi field agar form registrasi/consent dapat menampilkannya
+      allow read: if true;
+      // Pengelolaan katalog field oleh admin terautentikasi
+      allow write: if isAuthenticated();
+    }
+
     // 3. ROLES (RBAC Definitions)
     match /roles/{roleId} {
       // User terautentikasi dapat membaca definisi role

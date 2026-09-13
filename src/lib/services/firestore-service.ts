@@ -172,24 +172,30 @@ export const defaultMasterCustomFields: AppCustomField[] = [
     description: 'Relevan untuk kontributor Kamus & Preservasi Bahasa Dayak Arut',
     options: ['Arut Hulu', 'Arut Hilir / Tengah', 'Delang / Belantikan', 'Tamuan', 'Ngaju / Kahayan', 'Lainnya / Luar Daerah'],
     required: true,
+    isSystemField: true,
   },
   {
+    id: 'cf_origin_village',
     key: 'origin_village',
     label: 'Asal Desa / Wilayah Adat',
     type: 'text',
     placeholder: 'Contoh: Desa Sambi, Sukarami, Pandau, Gandis...',
     description: 'Pemetaan domisili asal penutur & riset bentang kebudayaan',
     required: false,
+    isSystemField: true,
   },
   {
+    id: 'cf_organization',
     key: 'organization',
     label: 'Instansi / Komunitas / Kampus',
     type: 'text',
     placeholder: 'Contoh: Universitas Palangka Raya / Sanggar Seni Arut...',
     description: 'Afiliasi akademik atau komunitas budaya Anda',
     required: false,
+    isSystemField: true,
   },
   {
+    id: 'cf_expertise',
     key: 'expertise',
     label: 'Bidang Keahlian / Minat',
     type: 'select',
@@ -197,14 +203,17 @@ export const defaultMasterCustomFields: AppCustomField[] = [
     description: 'Fokus kontribusi di ekosistem Aruta',
     options: ['Penutur Asli / Tetua Adat', 'Peneliti / Akademisi', 'Penggiat Budaya & Seni', 'Pemuda & Komunitas Lokal', 'Pemerhati Umum'],
     required: false,
+    isSystemField: true,
   },
   {
+    id: 'cf_whatsapp_number',
     key: 'whatsapp_number',
     label: 'Nomor WhatsApp / Kontak',
     type: 'tel',
     placeholder: 'Contoh: 081234567890',
     description: 'Koordinasi kegiatan lapangan dan verifikasi kontribusi',
     required: false,
+    isSystemField: true,
   }
 ];
 
@@ -222,6 +231,58 @@ export async function getMasterCustomFields(): Promise<AppCustomField[]> {
     }
   }
   return getLocalItem<AppCustomField[]>('custom_fields', defaultMasterCustomFields);
+}
+
+export async function saveMasterCustomField(field: AppCustomField): Promise<void> {
+  const fieldId = field.id || `cf_${field.key}`;
+  const record: AppCustomField = {
+    ...field,
+    id: fieldId,
+    key: field.key.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_'),
+    updatedAt: new Date().toISOString(),
+    createdAt: field.createdAt || new Date().toISOString(),
+  };
+
+  const f = await getFirestoreModule();
+  if (f) {
+    try {
+      const { fs, db } = f;
+      await fs.setDoc(fs.doc(db, 'custom_fields', fieldId), cleanData(record as unknown as Record<string, unknown>), { merge: true });
+    } catch (e) {
+      console.error('[SSO Firestore] saveMasterCustomField error:', e);
+    }
+  }
+
+  const existing = getLocalItem<AppCustomField[]>('custom_fields', defaultMasterCustomFields);
+  const idx = existing.findIndex(item => item.key === record.key || item.id === record.id);
+  let updatedList: AppCustomField[];
+  if (idx >= 0) {
+    updatedList = [...existing];
+    updatedList[idx] = { ...updatedList[idx], ...record };
+  } else {
+    updatedList = [...existing, record];
+  }
+  setLocalItem('custom_fields', updatedList);
+}
+
+export async function deleteMasterCustomField(fieldKeyOrId: string): Promise<void> {
+  const f = await getFirestoreModule();
+  if (f) {
+    try {
+      const { fs, db } = f;
+      const directDoc = fs.doc(db, 'custom_fields', fieldKeyOrId);
+      await fs.deleteDoc(directDoc);
+      if (!fieldKeyOrId.startsWith('cf_')) {
+        await fs.deleteDoc(fs.doc(db, 'custom_fields', `cf_${fieldKeyOrId}`));
+      }
+    } catch (e) {
+      console.error('[SSO Firestore] deleteMasterCustomField error:', e);
+    }
+  }
+
+  const existing = getLocalItem<AppCustomField[]>('custom_fields', defaultMasterCustomFields);
+  const filtered = existing.filter(item => item.key !== fieldKeyOrId && item.id !== fieldKeyOrId);
+  setLocalItem('custom_fields', filtered);
 }
 
 const defaultSettings: SSOSettings = {

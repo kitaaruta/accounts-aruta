@@ -24,7 +24,9 @@ import {
   X, 
   Globe,
   Code2,
-  FileCheck 
+  FileCheck,
+  SlidersHorizontal,
+  ExternalLink 
 } from 'lucide-react';
 
 export default function AdminAppsManagementPage() {
@@ -83,6 +85,7 @@ export default function AdminAppsManagementPage() {
   };
 
   const handleOpenCreate = () => {
+    getMasterCustomFields().then(setMasterFields).catch(() => {});
     setModalMode('create');
     setSelectedApp(null);
     setFormName('');
@@ -95,6 +98,7 @@ export default function AdminAppsManagementPage() {
   };
 
   const handleOpenEdit = (app: RegisteredApp) => {
+    getMasterCustomFields().then(setMasterFields).catch(() => {});
     setModalMode('edit');
     setSelectedApp(app);
     setFormName(app.name);
@@ -237,11 +241,19 @@ export default function AdminAppsManagementPage() {
             )}
 
             <Link
+              href="/admin/custom-fields"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-purple-200 bg-purple-50/80 px-3.5 py-2 text-xs font-semibold text-purple-700 shadow-xs hover:bg-purple-100 transition-colors"
+            >
+              <SlidersHorizontal className="h-4 w-4 text-purple-600" />
+              <span>Kelola Form Kustom</span>
+            </Link>
+
+            <Link
               href="/admin/docs"
               className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50 transition-colors"
             >
               <Code2 className="h-4 w-4 text-blue-600" />
-              <span>Panduan Integrasi Developer</span>
+              <span>Panduan Integrasi</span>
             </Link>
 
             <button
@@ -483,9 +495,14 @@ export default function AdminAppsManagementPage() {
                     <label className="block text-xs font-semibold text-slate-700">
                       Formulir Tambahan Profil (App-Specific Fields)
                     </label>
-                    <span className="text-[10px] text-purple-600 font-medium bg-purple-50 px-2 py-0.5 rounded border border-purple-100">
-                      Dinamis saat SSO
-                    </span>
+                    <Link
+                      href="/admin/custom-fields"
+                      target="_blank"
+                      className="text-[10px] text-purple-600 font-semibold hover:underline inline-flex items-center gap-1"
+                    >
+                      <span>+ Kelola / Tambah Field</span>
+                      <ExternalLink className="h-2.5 w-2.5" />
+                    </Link>
                   </div>
                   <p className="text-[11px] text-slate-500 mb-2.5">
                     Centang formulir khusus yang wajib diisi oleh pengguna saat mendaftar/login ke aplikasi ini:

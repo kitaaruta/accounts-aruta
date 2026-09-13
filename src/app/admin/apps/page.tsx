@@ -109,6 +109,36 @@ export default function AdminAppsManagementPage() {
     }
   };
 
+  const dummyAppIds = [
+    'app-aruta-portal', 'app-aruta-riset', 'app-aruta-pustaka',
+    'app-aruta-bahasa', 'app-aruta-peta', 'app-aruta-ruang',
+    'app-aruta-kelola', 'app-aruta-album', 'app-aruta-vtour'
+  ];
+
+  const hasDummyApps = apps.some(a => dummyAppIds.includes(a.id));
+
+  const handleCleanupDummies = async () => {
+    if (!confirm('Bersihkan dan hapus semua data aplikasi dummy/contoh bawaan sistem? Hanya aplikasi riil buatan Anda yang akan dipertahankan.')) {
+      return;
+    }
+    setLoading(true);
+    try {
+      const dummies = apps.filter(a => dummyAppIds.includes(a.id));
+      for (const d of dummies) {
+        await deleteRegisteredApp(d.id);
+      }
+      try {
+        localStorage.removeItem('sso_aruta_apps');
+      } catch {}
+      showNotification('success', `Berhasil membersihkan ${dummies.length} aplikasi dummy.`);
+      await loadApps();
+    } catch (err) {
+      showNotification('error', 'Gagal membersihkan aplikasi dummy.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSaveModal = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formName.trim()) {
@@ -183,6 +213,17 @@ export default function AdminAppsManagementPage() {
           </div>
 
           <div className="flex items-center gap-2">
+            {hasDummyApps && (
+              <button
+                onClick={handleCleanupDummies}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-3.5 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-100 transition-colors cursor-pointer"
+                title="Hapus semua aplikasi dummy/contoh bawaan sistem"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>Bersihkan Data Dummy ({apps.filter(a => dummyAppIds.includes(a.id)).length})</span>
+              </button>
+            )}
+
             <Link
               href="/admin/docs"
               className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50 transition-colors"

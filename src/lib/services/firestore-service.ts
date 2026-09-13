@@ -160,116 +160,7 @@ const defaultRoles: SSORole[] = [
   },
 ];
 
-const defaultApps: RegisteredApp[] = [
-  {
-    id: 'app-aruta-portal',
-    name: 'Portal Utama Aruta.id',
-    description: 'Portal pusat informasi, publikasi, dan hub utama ekosistem Arut Utara',
-    clientId: 'aruta_portal_01',
-    clientSecret: 'sec_live_aruta_portal_secret_key_8921',
-    redirectUris: ['https://aruta.id/auth/callback', 'https://www.aruta.id/auth/callback', 'http://localhost:3001/auth/callback'],
-    logoUrl: '',
-    isActive: true,
-    allowedScopes: ['openid', 'profile', 'email', 'roles'],
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'app-aruta-riset',
-    name: 'Pusat Riset Arut Utara',
-    description: 'Jurnal penelitian, publikasi ilmiah, dan dataset sains terbuka kawasan Arut',
-    clientId: 'aruta_riset_02',
-    clientSecret: 'sec_live_aruta_riset_secret_key_7712',
-    redirectUris: ['https://riset.aruta.id/auth/callback', 'http://localhost:3002/auth/callback'],
-    logoUrl: '',
-    isActive: true,
-    allowedScopes: ['openid', 'profile', 'email'],
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'app-aruta-pustaka',
-    name: 'Pustaka & Arsip Adat',
-    description: 'Arsip sejarah, manuskrip kebudayaan, dan rekaman tutur lisan Dayak Arut',
-    clientId: 'aruta_pustaka_03',
-    clientSecret: 'sec_live_aruta_pustaka_secret_key_3345',
-    redirectUris: ['https://pustaka.aruta.id/auth/callback', 'http://localhost:3003/auth/callback'],
-    logoUrl: '',
-    isActive: true,
-    allowedScopes: ['openid', 'profile', 'email'],
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'app-aruta-bahasa',
-    name: 'Preservasi Bahasa Dayak Arut',
-    description: 'Kamus digital, korpus dialek lokal, dan preservasi leksikon bahasa daerah',
-    clientId: 'aruta_bahasa_04',
-    clientSecret: 'sec_live_aruta_bahasa_secret_key_9182',
-    redirectUris: ['https://bahasa.aruta.id/auth/callback', 'http://localhost:3004/auth/callback'],
-    logoUrl: '',
-    isActive: true,
-    allowedScopes: ['openid', 'profile', 'email'],
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'app-aruta-peta',
-    name: 'Peta & Geospasial Arut Utara',
-    description: 'Sistem informasi geospasial (GIS), batas adat, bentang alam, dan peta tematik',
-    clientId: 'aruta_peta_05',
-    clientSecret: 'sec_live_aruta_peta_secret_key_6621',
-    redirectUris: ['https://peta.aruta.id/auth/callback', 'http://localhost:3005/auth/callback'],
-    logoUrl: '',
-    isActive: true,
-    allowedScopes: ['openid', 'profile', 'email'],
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'app-aruta-ruang',
-    name: 'Ruang Komunitas & Pemuda',
-    description: 'Wadah kolaborasi, agenda pemuda, diskusi warga, dan inovasi desa Arut Utara',
-    clientId: 'aruta_ruang_06',
-    clientSecret: 'sec_live_aruta_ruang_secret_key_5519',
-    redirectUris: ['https://ruang.aruta.id/auth/callback', 'http://localhost:3006/auth/callback'],
-    logoUrl: '',
-    isActive: true,
-    allowedScopes: ['openid', 'profile', 'email'],
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'app-aruta-kelola',
-    name: 'Pusat Kelola Data Aruta',
-    description: 'Konsol manajemen sumber daya, rest api data, dan integrasi layanan publik',
-    clientId: 'aruta_kelola_07',
-    clientSecret: 'sec_live_aruta_kelola_secret_key_1194',
-    redirectUris: ['https://kelola.aruta.id/auth/callback', 'http://localhost:3007/auth/callback'],
-    logoUrl: '',
-    isActive: true,
-    allowedScopes: ['openid', 'profile', 'email', 'roles'],
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'app-aruta-album',
-    name: 'Galeri Visual Arut Utara',
-    description: 'Dokumentasi visual fotografi lanskap alam, flora-fauna, dan masyarakat Arut',
-    clientId: 'aruta_album_08',
-    clientSecret: 'sec_live_aruta_album_secret_key_4432',
-    redirectUris: ['https://album.aruta.id/auth/callback', 'http://localhost:3008/auth/callback'],
-    logoUrl: '',
-    isActive: true,
-    allowedScopes: ['openid', 'profile', 'email'],
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'app-aruta-vtour',
-    name: 'Virtual Tour Arut Utara',
-    description: 'Eksplorasi panorama interaktif 360 derajat kekayaan alam dan sejarah Arut Utara',
-    clientId: 'aruta_vtour_09',
-    clientSecret: 'sec_live_aruta_vtour_secret_key_2210',
-    redirectUris: ['https://vtour.aruta.id/auth/callback', 'http://localhost:3009/auth/callback'],
-    logoUrl: '',
-    isActive: true,
-    allowedScopes: ['openid', 'profile', 'email'],
-    createdAt: new Date().toISOString(),
-  }
-];
+const defaultApps: RegisteredApp[] = [];
 
 const defaultSettings: SSOSettings = {
   appName: 'Aruta Single Sign-On',
@@ -631,14 +522,11 @@ export async function deletePermission(permId: string): Promise<void> {
 // REGISTERED OAUTH APPS REPOSITORY
 // ----------------------------------------------------
 export async function listRegisteredApps(): Promise<RegisteredApp[]> {
-  const localApps = getLocalItem<RegisteredApp[]>('apps', defaultApps);
-
   if (typeof window === 'undefined') {
     if (isFirebaseConfigured()) {
-      const remoteApps = await fetchFirestoreCollectionREST<RegisteredApp>('apps');
-      return remoteApps.length > 0 ? remoteApps : defaultApps;
+      return await fetchFirestoreCollectionREST<RegisteredApp>('apps');
     }
-    return defaultApps;
+    return [];
   }
 
   const f = await getFirestoreModule();
@@ -646,33 +534,16 @@ export async function listRegisteredApps(): Promise<RegisteredApp[]> {
     try {
       const { fs, db } = f;
       const snap = await fs.getDocs(fs.collection(db, 'apps'));
-      if (!snap.empty) {
-        const firestoreApps = snap.docs.map(d => d.data() as RegisteredApp);
-        // Combine Firestore apps with any local apps
-        const map = new Map<string, RegisteredApp>();
-        localApps.forEach(a => map.set(a.id, a));
-        firestoreApps.forEach(a => map.set(a.id, a));
-        const merged = Array.from(map.values());
-        setLocalItem('apps', merged);
-        return merged;
-      } else {
-        // If Firestore apps collection is empty, seed defaultApps
-        try {
-          for (const a of defaultApps) {
-            await fs.setDoc(fs.doc(db, 'apps', a.id), cleanData(a as unknown as Record<string, unknown>), { merge: true });
-          }
-        } catch (seedErr) {
-          console.warn('[SSO Firestore] Auto-seed apps warning:', seedErr);
-        }
-        return localApps;
-      }
+      const firestoreApps = snap.docs.map(d => d.data() as RegisteredApp);
+      setLocalItem('apps', firestoreApps);
+      return firestoreApps;
     } catch (e) {
       console.error('[SSO Firestore] listRegisteredApps error:', e);
-      return localApps;
+      return getLocalItem<RegisteredApp[]>('apps', []);
     }
   }
 
-  return localApps;
+  return getLocalItem<RegisteredApp[]>('apps', []);
 }
 
 export async function getAppByClientId(clientId: string): Promise<RegisteredApp | null> {
@@ -680,10 +551,9 @@ export async function getAppByClientId(clientId: string): Promise<RegisteredApp 
     if (isFirebaseConfigured()) {
       const apps = await fetchFirestoreCollectionREST<RegisteredApp>('apps');
       const found = apps.find(a => a.clientId === clientId && a.isActive);
-      if (found) return found;
-      return defaultApps.find(a => a.clientId === clientId && a.isActive) || null;
+      return found || null;
     }
-    return defaultApps.find(a => a.clientId === clientId && a.isActive) || null;
+    return null;
   }
 
   const f = await getFirestoreModule();
@@ -707,7 +577,7 @@ export async function getAppByClientId(clientId: string): Promise<RegisteredApp 
 
 export async function saveRegisteredApp(appData: RegisteredApp): Promise<void> {
   // 1. Save to localStorage immediately so UI updates instantly
-  const apps = getLocalItem<RegisteredApp[]>('apps', defaultApps);
+  const apps = getLocalItem<RegisteredApp[]>('apps', []);
   const idx = apps.findIndex(a => a.id === appData.id);
   if (idx >= 0) {
     apps[idx] = { ...apps[idx], ...appData, updatedAt: new Date().toISOString() };
@@ -735,7 +605,7 @@ export async function saveRegisteredApp(appData: RegisteredApp): Promise<void> {
 
 export async function deleteRegisteredApp(appId: string): Promise<void> {
   // 1. Remove from local store immediately
-  const apps = getLocalItem<RegisteredApp[]>('apps', defaultApps).filter(a => a.id !== appId);
+  const apps = getLocalItem<RegisteredApp[]>('apps', []).filter(a => a.id !== appId);
   setLocalItem('apps', apps);
 
   // 2. Remove from Firestore

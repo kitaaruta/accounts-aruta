@@ -44,7 +44,7 @@ export function DocsContent({ inAdmin = false }: { inAdmin?: boolean }) {
   // AI Prompt Kit State
   const [aiAppName, setAiAppName] = useState('Portal Aplikasi Saya');
   const [aiClientId, setAiClientId] = useState('aruta_app_882910394b');
-  const [aiClientSecret, setAiClientSecret] = useState('sec_live_99aa88bb77cc66dd55ee44ff');
+  const [aiClientSecret, setAiClientSecret] = useState('ARUTA_CLIENT_SECRET_PLACEHOLDER');
   const [aiRedirectUri, setAiRedirectUri] = useState('http://localhost:3000/api/auth/callback/aruta');
   const [aiFramework, setAiFramework] = useState<'master' | 'nextjs' | 'react-express' | 'laravel' | 'fastapi'>('master');
   const [aiLoginMode, setAiLoginMode] = useState<'popup' | 'redirect'>('popup');
@@ -362,10 +362,14 @@ ${architectureKnowledgeBlock}
 ### 🔑 KREDENSIAL APLIKASI SAYA:
 - Nama Aplikasi Klien: ${aiAppName}
 - Client ID: ${aiClientId}
-- Client Secret: ${aiClientSecret}
+- Client Secret (Environment Variable): Simpan rahasia ini HANYA di file .env backend (misal ARUTA_CLIENT_SECRET="${aiClientSecret}"). JANGAN PERNAH diekspos ke browser / frontend bundle.
 - Redirect URI / Callback URL: ${aiRedirectUri}
 - Base URL SSO Aruta: ${baseUrl}
 - Mode Login Terpilih: ${isPopup ? 'Mode Popup Window (seperti Sign-in with Google: menggunakan window.open, postMessage untuk mengirim authorization code ke window opener, dan otomatis window.close())' : 'Mode Full Page Redirect standar OAuth 2.0'}
+
+### 🛡️ ATURAN KEAMANAN WAJIB:
+- Client Secret WAJIB diproses di sisi Server (Backend / Route Handler / Server Action). Jangan letakkan di kode client/browser.
+- Buat file .env.example dan sertakan panduan penempatan ARUTA_CLIENT_SECRET.
 
 ### 📋 TUGAS IMPLEMENTASI:
 1. Buat helper/service autentikasi SSO Aruta yang mengelola pembuatan Authorization URL (sertakan state CSRF token), penukaran code ke access token via POST ${baseUrl}/api/oauth/token, dan pengambilan profil via GET ${baseUrl}/api/oauth/userinfo.
@@ -389,7 +393,7 @@ ${architectureKnowledgeBlock}
 
 Konfigurasi Aplikasi:
 - Client ID: ${aiClientId}
-- Client Secret: ${aiClientSecret}
+- Client Secret (Environment Variable): Simpan di .env.local sebagai ARUTA_CLIENT_SECRET="${aiClientSecret}". JANGAN PERNAH diekspos dengan prefix NEXT_PUBLIC_.
 - Redirect URI: ${aiRedirectUri}
 - Base URL SSO: ${baseUrl}
 - Mode Login: ${isPopup ? 'Popup Window (window.open + postMessage listener)' : 'Full Page Redirect'}
@@ -410,7 +414,7 @@ ${architectureKnowledgeBlock}
 
 Konfigurasi SSO:
 - Client ID: ${aiClientId}
-- Client Secret: ${aiClientSecret}
+- Client Secret (Backend Only): Simpan di .env backend sebagai ARUTA_CLIENT_SECRET="${aiClientSecret}". Jangan pernah diekspos ke frontend React!
 - Redirect URI: ${aiRedirectUri}
 - Base URL SSO: ${baseUrl}
 - Mode: ${isPopup ? 'Popup Window (window.open + postMessage)' : 'Full Redirect'}
@@ -430,7 +434,7 @@ ${architectureKnowledgeBlock}
 
 Konfigurasi SSO:
 - Client ID: ${aiClientId}
-- Client Secret: ${aiClientSecret}
+- Client Secret (.env): Simpan di .env sebagai ARUTA_CLIENT_SECRET="${aiClientSecret}" dan akses via config('services.aruta.client_secret').
 - Redirect URI: ${aiRedirectUri}
 - Base URL SSO: ${baseUrl}
 
@@ -450,7 +454,7 @@ ${architectureKnowledgeBlock}
 
 Konfigurasi SSO:
 - Client ID: ${aiClientId}
-- Client Secret: ${aiClientSecret}
+- Client Secret (.env): Simpan di .env sebagai ARUTA_CLIENT_SECRET="${aiClientSecret}"
 - Redirect URI: ${aiRedirectUri}
 - Base URL SSO: ${baseUrl}
 
@@ -1299,11 +1303,15 @@ export async function POST(req: Request) {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Client Secret</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold text-slate-700">Client Secret</label>
+                  <span className="text-[10px] text-amber-600 font-medium">⚠️ Rahasia (.env only)</span>
+                </div>
                 <input
                   type="text"
                   value={aiClientSecret}
                   onChange={(e) => setAiClientSecret(e.target.value)}
+                  placeholder="ARUTA_CLIENT_SECRET_PLACEHOLDER"
                   className="w-full rounded-lg border border-slate-200 bg-white py-2 px-3 text-xs font-mono text-slate-800 focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
                 />
               </div>
@@ -1371,6 +1379,21 @@ export async function POST(req: Request) {
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Security Notice Banner */}
+          <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-3.5 flex items-start gap-3">
+            <div className="p-1 rounded-md bg-amber-100 text-amber-700 mt-0.5">
+              <ShieldCheck className="h-4 w-4" />
+            </div>
+            <div className="space-y-0.5 text-xs">
+              <p className="font-semibold text-amber-900">
+                Praktik Keamanan Kredensial AI (Zero-Leak Policy)
+              </p>
+              <p className="text-amber-800 leading-relaxed">
+                <strong>Client ID</strong> dan <strong>Redirect URI</strong> aman dibagikan ke AI agent karena merupakan konfigurasi publik. Namun, <strong>Client Secret</strong> adalah rahasia backend. Jangan tempelkan secret produksi asli Anda ke dalam prompt AI! Cukup gunakan placeholder default, lalu letakkan Client Secret asli Anda di file <code className="bg-amber-100 px-1 py-0.5 rounded text-amber-900 font-mono">.env.local</code> aplikasi Anda.
+              </p>
             </div>
           </div>
 

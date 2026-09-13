@@ -32,5 +32,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/api/oauth/:path*', '/.well-known/:path*'],
+  matcher: ['/api/oauth/:path*', '/oauth/:path*', '/.well-known/:path*'],
 };

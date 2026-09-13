@@ -75,10 +75,18 @@ export function AppNavbar() {
               <div className="relative flex items-center gap-2">
                 <Link
                   href="/profile"
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 border border-slate-200 text-slate-700 hover:border-blue-300 hover:text-blue-600 transition-colors"
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 border border-slate-200 text-slate-700 hover:border-blue-300 hover:text-blue-600 transition-colors overflow-hidden shrink-0"
                   title="Kartu Profil"
                 >
-                  <User className="h-4 w-4" />
+                  {userProfile.photoURL ? (
+                    <img
+                      src={userProfile.photoURL}
+                      alt={userProfile.displayName}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <User className="h-4 w-4" />
+                  )}
                 </Link>
 
                 {/* Subtle, unobtrusive logout button */}

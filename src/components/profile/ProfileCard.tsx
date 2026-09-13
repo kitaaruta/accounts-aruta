@@ -129,13 +129,30 @@ export function ProfileCard({ targetUser, currentUser, onLogout }: ProfileCardPr
       {/* Profile Header */}
       <div className="flex flex-col items-center text-center pb-6 border-b border-slate-100">
         <div className="relative mb-3">
-          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-blue-100 text-blue-700 font-bold text-3xl border border-blue-200 shadow-xs">
-            {targetUser.displayName ? targetUser.displayName.charAt(0).toUpperCase() : 'U'}
-          </div>
+          {targetUser.photoURL ? (
+            <img
+              src={targetUser.photoURL}
+              alt={targetUser.displayName}
+              className="h-20 w-20 rounded-full object-cover border-2 border-slate-200 shadow-xs"
+            />
+          ) : (
+            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-blue-100 text-blue-700 font-bold text-3xl border border-blue-200 shadow-xs">
+              {targetUser.displayName ? targetUser.displayName.charAt(0).toUpperCase() : 'U'}
+            </div>
+          )}
           {isTargetAdmin && (
             <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-white shadow-xs" title="Administrator">
               <Sparkles className="h-3.5 w-3.5" />
             </span>
+          )}
+          {isOwner && !isTargetAdmin && (
+            <Link
+              href="/account"
+              className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-slate-700 text-white shadow-xs hover:bg-blue-600 transition-colors"
+              title="Ubah Foto Profil di Akun"
+            >
+              <Edit3 className="h-3 w-3" />
+            </Link>
           )}
         </div>
 

@@ -23,6 +23,8 @@ import {
   XCircle,
   AppWindow
 } from 'lucide-react';
+import { AvatarUpload } from '@/components/profile/AvatarUpload';
+import { uploadProfilePhoto } from '@/lib/services/storage-service';
 
 function RegisterContent() {
   const router = useRouter();
@@ -33,6 +35,9 @@ function RegisterContent() {
   const [username, setUsername] = useState('');
   const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'invalid'>('idle');
   const [usernameMessage, setUsernameMessage] = useState('');
+
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -138,7 +143,17 @@ function RegisterContent() {
         return;
       }
 
-      await register(email, password, fullName, cleanUser);
+      let uploadedPhotoURL: string | undefined = undefined;
+      if (avatarFile) {
+        try {
+          uploadedPhotoURL = await uploadProfilePhoto(avatarFile, cleanUser);
+        } catch (photoErr) {
+          console.warn('Photo upload fallback to preview:', photoErr);
+          uploadedPhotoURL = avatarPreview || undefined;
+        }
+      }
+
+      await register(email, password, fullName, cleanUser, uploadedPhotoURL);
       setSuccess(true);
       setTimeout(() => {
         router.push(redirectInfo.targetUrl);
@@ -212,6 +227,27 @@ function RegisterContent() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Foto Profil */}
+            <div className="flex flex-col items-center justify-center pb-2 border-b border-slate-100">
+              <AvatarUpload
+                currentPhotoURL={avatarPreview}
+                displayName={fullName || 'U'}
+                size="md"
+                onFileSelected={(file, previewUrl) => {
+                  setAvatarFile(file);
+                  setAvatarPreview(previewUrl);
+                }}
+                onPhotoRemoved={() => {
+                  setAvatarFile(null);
+                  setAvatarPreview(null);
+                }}
+                disabled={loading || success}
+              />
+              <span className="text-[11px] text-slate-400 font-medium mt-1">
+                Foto Profil (Opsional)
+              </span>
+            </div>
+
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                 Nama Lengkap

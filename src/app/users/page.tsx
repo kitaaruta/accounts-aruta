@@ -353,8 +353,12 @@ export default function UsersPage() {
                     <tr key={u.uid} className="hover:bg-slate-50/60 transition-colors">
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-700 font-bold text-xs border border-blue-200">
-                            {u.displayName.charAt(0).toUpperCase()}
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-blue-700 font-bold text-xs border border-blue-200 overflow-hidden shrink-0">
+                            {u.photoURL ? (
+                              <img src={u.photoURL} alt={u.displayName} className="h-full w-full object-cover" />
+                            ) : (
+                              u.displayName.charAt(0).toUpperCase()
+                            )}
                           </div>
                           <div>
                             <div className="flex items-center gap-1.5">

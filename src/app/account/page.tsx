@@ -23,6 +23,8 @@ import {
   ExternalLink,
   Laptop
 } from 'lucide-react';
+import { AvatarUpload } from '@/components/profile/AvatarUpload';
+import { uploadProfilePhoto } from '@/lib/services/storage-service';
 
 export default function AccountPage() {
   const router = useRouter();
@@ -46,12 +48,46 @@ export default function AccountPage() {
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileSuccess, setProfileSuccess] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
 
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [passwordSuccess, setPasswordSuccess] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
 
   const [resetEmailSent, setResetEmailSent] = useState(false);
+
+  const handleAvatarChange = async (file: File) => {
+    if (!userProfile) return;
+    try {
+      setAvatarUploading(true);
+      setProfileError(null);
+      const photoURL = await uploadProfilePhoto(file, userProfile.uid);
+      await updateProfileData({ photoURL });
+      setProfileSuccess(true);
+      setTimeout(() => setProfileSuccess(false), 3000);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Gagal memperbarui foto profil.';
+      setProfileError(errorMessage);
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
+  const handleAvatarRemove = async () => {
+    if (!userProfile) return;
+    try {
+      setAvatarUploading(true);
+      setProfileError(null);
+      await updateProfileData({ photoURL: '' });
+      setProfileSuccess(true);
+      setTimeout(() => setProfileSuccess(false), 3000);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Gagal menghapus foto profil.';
+      setProfileError(errorMessage);
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
 
   useEffect(() => {
     if (userProfile) {
@@ -155,11 +191,16 @@ export default function AccountPage() {
         </div>
 
         {/* Clean Header Card */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs flex items-center justify-between gap-4">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-100 text-blue-700 font-bold text-xl border border-blue-200 shadow-xs">
-              {userProfile.displayName ? userProfile.displayName.charAt(0).toUpperCase() : 'U'}
-            </div>
+            <AvatarUpload
+              currentPhotoURL={userProfile.photoURL}
+              displayName={userProfile.displayName || 'U'}
+              size="sm"
+              isUploading={avatarUploading}
+              onFileSelected={(file) => handleAvatarChange(file)}
+              onPhotoRemoved={handleAvatarRemove}
+            />
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-base font-bold text-slate-900">{userProfile.displayName}</h1>

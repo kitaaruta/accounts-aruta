@@ -1,0 +1,19 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /profile_photos/{fileName} {
+      // Siapapun dapat melihat foto profil (publik)
+      allow read: if true;
+      
+      // Hanya user yang terautentikasi yang dapat mengunggah foto profil
+      // File harus berupa gambar dan ukuran maksimal 5MB
+      allow write: if request.auth != null
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+                   
+      // Penghapusan diizinkan oleh user terautentikasi
+      allow delete: if request.auth != null;
+    }
+  }
+}

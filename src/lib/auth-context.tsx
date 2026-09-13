@@ -25,7 +25,7 @@ interface AuthContextType {
   userProfile: SSOUser | null;
   loading: boolean;
   login: (email: string, pass: string) => Promise<void>;
-  register: (email: string, pass: string, name: string, username: string) => Promise<void>;
+  register: (email: string, pass: string, name: string, username: string, photoURL?: string) => Promise<void>;
   logout: () => Promise<void>;
   forgotPassword: (email: string) => Promise<void>;
   resetPassword: (code: string, newPass: string) => Promise<void>;
@@ -59,6 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               username: defaultUsername,
               email: fbUser.email || '',
               displayName: fbUser.displayName || fbUser.email?.split('@')[0] || 'User',
+              photoURL: fbUser.photoURL || undefined,
               role: 'Member',
               status: 'active',
               emailVerified: fbUser.emailVerified,
@@ -168,18 +169,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const register = async (email: string, pass: string, name: string, username: string) => {
+  const register = async (email: string, pass: string, name: string, username: string, photoURL?: string) => {
     setLoading(true);
     try {
       const cleanUsername = username.replace(/^@/, '').toLowerCase().trim();
       if (isFirebaseConfigured()) {
         const cred = await createUserWithEmailAndPassword(auth, email, pass);
-        await fbUpdateProfile(cred.user, { displayName: name });
+        const fbProfile: { displayName?: string; photoURL?: string } = { displayName: name };
+        if (photoURL) fbProfile.photoURL = photoURL;
+        await fbUpdateProfile(cred.user, fbProfile);
+
         const newProfile: SSOUser = {
           uid: cred.user.uid,
           username: cleanUsername,
           email,
           displayName: name,
+          photoURL: photoURL || undefined,
           role: 'Member',
           status: 'active',
           emailVerified: false,
@@ -196,6 +201,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           username: cleanUsername,
           email,
           displayName: name,
+          photoURL: photoURL || undefined,
           role: 'Member',
           status: 'active',
           emailVerified: true,
@@ -257,8 +263,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await saveUserProfile(updated);
     setUserProfile(updated);
 
-    if (isFirebaseConfigured() && auth.currentUser && data.displayName) {
-      await fbUpdateProfile(auth.currentUser, { displayName: data.displayName });
+    if (isFirebaseConfigured() && auth.currentUser) {
+      const fbUpdates: { displayName?: string; photoURL?: string } = {};
+      if (data.displayName !== undefined) fbUpdates.displayName = data.displayName;
+      if (data.photoURL !== undefined) fbUpdates.photoURL = data.photoURL;
+      if (Object.keys(fbUpdates).length > 0) {
+        await fbUpdateProfile(auth.currentUser, fbUpdates);
+      }
     }
 
     if (typeof window !== 'undefined') {

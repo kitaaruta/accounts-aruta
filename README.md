@@ -56,7 +56,13 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 > **Catatan:** Sistem telah dilengkapi *zero-config resilient fallback* di mana Anda dapat langsung menguji login, register, dan seluruh antarmuka admin/user tanpa error bahkan sebelum mengisi kredensial Firebase asli!
 
-### 2. Jalankan Mode Development
+### 2. Konfigurasi Aturan Firestore (Security Rules)
+Salin isi file [`firestore.rules`](./firestore.rules) ke **Firebase Console > Firestore Database > Rules** lalu klik **Publish**, atau gunakan Firebase CLI:
+```bash
+firebase deploy --only firestore:rules
+```
+
+### 3. Jalankan Mode Development
 ```bash
 npm run dev
 ```

@@ -1,0 +1,99 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Check if the authenticated user has admin or superadmin role
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.role in ['admin', 'superadmin'] ||
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'superadmin']
+      );
+    }
+
+    function isSuperadmin() {
+      return isAuthenticated() && (
+        request.auth.token.role == 'superadmin' ||
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'superadmin'
+      );
+    }
+
+    // 1. USERS collection
+    match /users/{userId} {
+      // User dapat membaca datanya sendiri, atau sesama pengguna terautentikasi (untuk resolusi profil/username), atau Admin
+      allow read: if isAuthenticated();
+      // Registrasi awal: Pengguna yang baru login dapat membuat profilnya sendiri
+      allow create: if isOwner(userId) || isAdmin();
+      // Pengguna dapat mengupdate profilnya sendiri (nama, organisasi, telp) atau diupdate oleh Admin
+      allow update: if isOwner(userId) || isAdmin();
+      // Hanya Admin/Superadmin yang dapat menghapus user
+      allow delete: if isAdmin();
+    }
+
+    // 2. APPS (OAuth2 Client Applications)
+    match /apps/{appId} {
+      // Semua user yang login dapat membaca daftar aplikasi (untuk consent screen & portal app launcher)
+      allow read: if isAuthenticated();
+      // Hanya Admin/Superadmin yang dapat menambah, mengedit, atau menghapus aplikasi klien
+      allow write: if isAdmin();
+    }
+
+    // 3. ROLES (RBAC Definitions)
+    match /roles/{roleId} {
+      // User terautentikasi dapat membaca definisi role
+      allow read: if isAuthenticated();
+      // Hanya Admin/Superadmin yang dapat mengelola role
+      allow write: if isAdmin();
+    }
+
+    // 4. PERMISSIONS
+    match /permissions/{permissionId} {
+      // User terautentikasi dapat membaca katalog permission
+      allow read: if isAuthenticated();
+      // Hanya Superadmin yang dapat mengubah katalog permission
+      allow write: if isSuperadmin();
+    }
+
+    // 5. SETTINGS (Global SSO Settings)
+    match /settings/{settingId} {
+      // Siapapun yang terautentikasi dapat membaca konfigurasi umum SSO
+      allow read: if isAuthenticated();
+      // Hanya Superadmin yang dapat mengubah konfigurasi sistem
+      allow write: if isSuperadmin();
+    }
+
+    // 6. AUDIT LOGS
+    match /audit_logs/{logId} {
+      // Hanya Admin/Superadmin yang dapat membaca log audit
+      allow read: if isAdmin();
+      // Sistem/Client terautentikasi dapat menulis event log audit baru
+      allow create: if isAuthenticated();
+      // Audit log bersifat immutable (tidak boleh diubah atau dihapus)
+      allow update, delete: if false;
+    }
+
+    // 7. OAUTH SESSIONS, CODES & CONSENTS (SSO internal)
+    match /oauth_codes/{codeId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /oauth_tokens/{tokenId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /oauth_consents/{consentId} {
+      allow read, write: if isAuthenticated();
+    }
+  }
+}

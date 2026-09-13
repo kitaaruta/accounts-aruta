@@ -7,7 +7,7 @@ import { useAuth } from '@/lib/auth-context';
 import { resolveOAuthRedirect, buildAuthLink } from '@/lib/auth/oauth-flow';
 import { getAppByClientId } from '@/lib/services/firestore-service';
 import { RegisteredApp } from '@/types/sso';
-import { ShieldCheck, Mail, Lock, Eye, EyeOff, ArrowRight, AlertCircle, Sparkles, AppWindow } from 'lucide-react';
+import { ShieldCheck, Mail, Lock, Eye, EyeOff, ArrowRight, AlertCircle, AppWindow } from 'lucide-react';
 
 function LoginForm() {
   const router = useRouter();
@@ -51,16 +51,6 @@ function LoginForm() {
       setError(errorMessage);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fillQuickDemo = (role: 'admin' | 'user') => {
-    if (role === 'admin') {
-      setEmail('admin@aruta.id');
-      setPassword('Admin@ArutaId2026!');
-    } else {
-      setEmail('user@aruta.id');
-      setPassword('User@ArutaId2026!');
     }
   };
 
@@ -181,30 +171,6 @@ function LoginForm() {
               )}
             </button>
           </form>
-
-          {/* Quick Demo Fill Buttons */}
-          <div className="mt-5 pt-4 border-t border-slate-100">
-            <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-medium mb-2">
-              <Sparkles className="h-3 w-3 text-blue-500" />
-              <span>Login Cepat Demo:</span>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => fillQuickDemo('admin')}
-                className="rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[11px] font-medium text-slate-700 hover:bg-slate-100 hover:border-slate-300 transition-colors"
-              >
-                Akun Admin
-              </button>
-              <button
-                type="button"
-                onClick={() => fillQuickDemo('user')}
-                className="rounded-md border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[11px] font-medium text-slate-700 hover:bg-slate-100 hover:border-slate-300 transition-colors"
-              >
-                Akun Member
-              </button>
-            </div>
-          </div>
         </div>
 
         {/* Register footer link */}
